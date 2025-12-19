@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>SHOP CÀY THUÊ</title>
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+.box{max-width:420px;margin:auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 10px #ccc}
+.hidden{display:none}
+input,button,select{width:100%;padding:10px;margin:8px 0}
+button{background:#0066ff;color:#fff;border:none;border-radius:6px;cursor:pointer}
+h2{text-align:center}
+hr{margin:15px 0}
+.log{font-size:14px;border-bottom:1px solid #ddd;padding:5px}
+.admin{background:#ffecec;padding:10px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="box" id="loginBox">
+<h2>Đăng nhập</h2>
+<input id="loginUser" placeholder="Tên tài khoản">
+<input id="loginPass" type="password" placeholder="Mật khẩu">
+<button onclick="login()">Đăng nhập</button>
+<hr>
+<button onclick="showRegister()">Tạo tài khoản</button>
+</div>
+
+<!-- REGISTER -->
+<div class="box hidden" id="registerBox">
+<h2>Đăng ký</h2>
+<input id="regUser" placeholder="Tên tài khoản">
+<input id="regPass" type="password" placeholder="Mật khẩu">
+<button onclick="register()">Đăng ký</button>
+<hr>
+<button onclick="showLogin()">Quay lại đăng nhập</button>
+</div>
+
+<!-- SHOP -->
+<div class="box hidden" id="shopBox">
+<h2>SHOP CÀY THUÊ</h2>
+<p>👤 Xin chào: <b id="userName"></b></p>
+<p>💰 Số dư: <b id="balance">0</b>đ</p>
+
+<select id="service">
+<option value="50000">Cày 500 LV - 50.000đ</option>
+<option value="100000">Cày 1000 LV - 100.000đ</option>
+<option value="200000">Lên V4 - 200.000đ</option>
+</select>
+
+<input id="coupon" placeholder="Mã giảm giá (SALE10)">
+<button onclick="buy()">Mua dịch vụ</button>
+
+<hr>
+<h3>Nạp card (demo)</h3>
+<input id="napTien" type="number" placeholder="Số tiền nạp">
+<button onclick="nap()">Nạp tiền</button>
+
+<hr>
+<h3>Lịch sử</h3>
+<div id="history"></div>
+
+<button onclick="logout()">Đăng xuất</button>
+
+<!-- ADMIN -->
+<div id="adminBox" class="admin hidden">
+<h3>ADMIN</h3>
+<input id="adminUser" placeholder="User cần chỉnh">
+<input id="adminMoney" type="number" placeholder="Số tiền">
+<button onclick="setMoney()">Cộng tiền</button>
+</div>
+
+</div>
+
+<script>
+let currentUser = localStorage.getItem("currentUser");
+
+// COUPON
+const coupons = {
+  "SALE10":10,
+  "SALE20":20
+};
+
+// LOAD
+if(currentUser) loadShop();
+
+function saveUser(u,data){
+  localStorage.setItem("user_"+u,JSON.stringify(data));
+}
+
+function getUser(u){
+  return JSON.parse(localStorage.getItem("user_"+u));
+}
+
+function showRegister(){
+  loginBox.classList.add("hidden");
+  registerBox.classList.remove("hidden");
+}
+
+function showLogin(){
+  registerBox.classList.add("hidden");
+  loginBox.classList.remove("hidden");
+}
+
+function register(){
+  let u=regUser.value.trim();
+  let p=regPass.value.trim();
+  if(!u||!p) return alert("Nhập đủ");
+  if(getUser(u)) return alert("Tài khoản tồn tại");
+  saveUser(u,{pass:p,balance:0,log:[]});
+  alert("Đăng ký thành công");
+  showLogin();
+}
+
+function login(){
+  let u=loginUser.value.trim();
+  let p=loginPass.value.trim();
+  let data=getUser(u);
+  if(!data||data.pass!==p) return alert("Sai tài khoản");
+  localStorage.setItem("currentUser",u);
+  loadShop();
+}
+
+function loadShop(){
+  loginBox.classList.add("hidden");
+  registerBox.classList.add("hidden");
+  shopBox.classList.remove("hidden");
+  currentUser=localStorage.getItem("currentUser");
+  userName.innerText=currentUser;
+  render();
+  if(currentUser==="admin") adminBox.classList.remove("hidden");
+}
+
+function render(){
+  let u=getUser(currentUser);
+  balance.innerText=u.balance;
+  history.innerHTML="";
+  u.log.forEach(l=>{
+    let d=document.createElement("div");
+    d.className="log";
+    d.innerText=l;
+    history.prepend(d);
+  });
+}
+
+function nap(){
+  let t=Number(napTien.value);
+  if(t<=0) return;
+  let u=getUser(currentUser);
+  u.balance+=t;
+  u.log.push("Nạp +"+t+"đ");
+  saveUser(currentUser,u);
+  render();
+}
+
+function buy(){
+  let price=Number(service.value);
+  let code=coupon.value.trim();
+  let discount= coupons[code]?price*coupons[code]/100:0;
+  let pay=price-discount;
+  let u=getUser(currentUser);
+  if(u.balance<pay) return alert("Không đủ tiền");
+  u.balance-=pay;
+  u.log.push("Mua dịch vụ -"+pay+"đ");
+  saveUser(currentUser,u);
+  render();
+}
+
+function logout(){
+  localStorage.removeItem("currentUser");
+  location.reload();
+}
+
+// ADMIN
+function setMoney(){
+  let u=adminUser.value.trim();
+  let m=Number(adminMoney.value);
+  let data=getUser(u);
+  if(!data) return alert("User không tồn tại");
+  data.balance+=m;
+  data.log.push("Admin cộng "+m+"đ");
+  saveUser(u,data);
+  alert("Đã cộng tiền");
+}
+</script>
+
+</body>
+</html>
